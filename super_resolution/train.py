@@ -19,8 +19,9 @@ MODEL_SAVE_FOLDER = "../models/"
 ##################################################################################
 
 
-model_folder = os.makedirs(os.path.join(MODEL_SAVE_FOLDER,
-            type(model).__name__), exist_ok=True)
+model_folder = os.path.join(MODEL_SAVE_FOLDER,
+                            type(model).__name__)
+os.makedirs(model_folder, exist_ok=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('Using {} device'.format(device))
@@ -29,8 +30,9 @@ model = model.to(device)
 
 def main():
     train_files, test_files = generate_train_test(0.25)
-    train_dataset = HrsrDataset(train_files, LR_FOLDER, HR_FOLDER)
-    test_dataset = HrsrDataset(test_files, LR_FOLDER, HR_FOLDER)
+    train_dataset = HrsrDataset(
+        train_files, LR_FOLDER, HR_FOLDER, (3840, 2160))
+    test_dataset = HrsrDataset(test_files, LR_FOLDER, HR_FOLDER, (3840, 2160))
 
     train_loader = DataLoader(train_dataset, BATCH_SIZE, shuffle=True)
     test_loader = DataLoader(test_dataset, BATCH_SIZE, shuffle=False)
@@ -43,12 +45,13 @@ def main():
         train_loop(train_loader, model, loss_fn, optimizer)
         test_loop(test_loader, model, loss_fn)
 
-    model.save(os.path.join(model_folder, f'{type(model).__name__}_B{BATCH_SIZE}_E{EPOCHS}.ptm'))
+    torch.save(model.state_dict(), os.path.join(
+        model_folder, f'{type(model).__name__}_B{BATCH_SIZE}_E{EPOCHS}.ptm'))
 
 
 def train_loop(dataloader, model, loss_fn, optimizer):
     size = len(dataloader.dataset)
-    for batch, (X, y) in enumerate(dataloader):
+    for batch, (X, y, _) in enumerate(dataloader):
         pred = model(X)
         loss = loss_fn(pred, y)
 
@@ -66,15 +69,15 @@ def test_loop(dataloader, model, loss_fn):
     test_loss, correct = 0, 0
 
     with torch.no_grad():
-        for X, y in dataloader:
+        for X, y, _ in dataloader:
             pred = model(X)
             test_loss += loss_fn(pred, y).item()
-            correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+            # correct += (pred.argmax(1) == y).type(torch.float).sum().item()
 
     test_loss /= size
-    correct /= size
-    print(
-        f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    # correct /= size
+    # print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+    # print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
 
 def generate_train_test(test_ratio):
