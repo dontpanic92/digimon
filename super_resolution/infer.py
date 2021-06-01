@@ -38,6 +38,7 @@ def main():
 
     with torch.no_grad():
         for X, y, file_name in infer_loader:
+            X = X.to(device)
             pred = model(X)
             im = transforms.ToPILImage()(pred)
             im.save(os.path.join(INFER_OUTPUT_FOLDER, file_name), "PNG")
