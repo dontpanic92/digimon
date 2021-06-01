@@ -9,7 +9,7 @@ from torchvision import transforms
 from hrsr_dataset import HrsrDataset
 from algo.srcnn import SRCNN
 
-INFER_LR_FOLDER = "../data/Infer_540/"
+INFER_LR_FOLDER = "../data/Infer_Input/"
 INFER_OUTPUT_FOLDER = "../data/Infer_Output/"
 BATCH_SIZE = 3
 model = SRCNN()
