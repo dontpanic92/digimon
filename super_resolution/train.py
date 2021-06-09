@@ -23,6 +23,7 @@ config = {
         "target_size": (1920, 1080),
         "resize_input": False,
         "resume_from": None,
+        "loss": nn.MSELoss,
     },
     "SRResNet": {
         "lr_folder": "../data/540/",
@@ -32,9 +33,11 @@ config = {
         "target_size": (1920, 1080),
         "resize_input": False,
         "resume_from": None,
+        "loss": nn.MSELoss,
     }
 }
 
+GPU_COUNT = 2
 
 # model = SRCNN()
 ModelClass = SRResNet
@@ -51,6 +54,7 @@ EPOCHS = config[model_name]["epochs"]
 target_size = config[model_name]["target_size"]
 resize_input = config[model_name]["resize_input"]
 resume_from = config[model_name]["resume_from"]
+Loss = config[model_name]["loss"]
 
 
 TEMP_FOLDER = "../data/temp/"
@@ -82,7 +86,7 @@ def setup(rank, world_size):
 def cleanup():
     dist.destroy_process_group()
 
-
+###############################################################################
 def main(rank, world_size):
     setup(rank, world_size)
 
@@ -111,7 +115,7 @@ def main(rank, world_size):
     train_loader = DataLoader(train_dataset, BATCH_SIZE, shuffle=False, sampler=train_sampler)
     test_loader = DataLoader(test_dataset, BATCH_SIZE, shuffle=False, sampler=test_sampler)
 
-    loss_fn = nn.MSELoss()
+    loss_fn = Loss()
     optimizer = optim.Adam(ddp_model.parameters(), lr=0.001)
     train(ddp_model, rank, loss_fn, optimizer, train_loader, test_loader, resume_from)
 
@@ -135,7 +139,7 @@ def train(model, rank, loss_fn, optimizer, train_loader, test_loader, resume_fro
                 model_folder, f'{type(model).__name__}_B{BATCH_SIZE}_E{t}.ptm'))
 
 
-def train_loop(dataloader: DataLoader, rank, model, loss_fn, optimizer, t):
+def train_loop(dataloader, rank, model, loss_fn, optimizer, t):
     size = len(dataloader.sampler)
     for batch, (X, y, file_name) in enumerate(dataloader):
         X = X.to(rank)
@@ -181,7 +185,6 @@ def save_decoded_image(img, name):
     img = img.view(img.size(0), 3, 2160, 3840)
     save_image(img, name)
 
-
 def generate_train_test(test_ratio):
     files = os.listdir(LR_FOLDER)
     random.shuffle(files)
@@ -201,7 +204,10 @@ def run_demo(demo_fn, world_size):
 
 if __name__ == "__main__":
     n_gpus = torch.cuda.device_count()
-    if n_gpus < 2:
-        print(f"Requires at least 2 GPUs to run, but got {n_gpus}.")
+    if n_gpus < GPU_COUNT:
+        print(f"Requires at least {GPU_COUNT} GPUs to run, but got {n_gpus}.")
     else:
-        run_demo(main, 2)
+        if model_name == SRGAN.__name__:
+            run_demo(main_gan, GPU_COUNT)
+        else:
+            run_demo(main, GPU_COUNT)

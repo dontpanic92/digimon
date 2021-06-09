@@ -1,6 +1,7 @@
 crawlers
 data
 models
+weights
 *.amltmp
 .ipynb_aml_checkpoints
 *.amltemp
