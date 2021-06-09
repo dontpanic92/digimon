@@ -14,14 +14,17 @@ class HrsrDataset(Dataset):
 
     def __getitem__(self, i):
         lr_image = Image.open(os.path.join(self.lr_folder, self.file_names[i]))
-        
-        if self.hr_folder != None:
-            hr_image = Image.open(os.path.join(self.hr_folder, self.file_names[i]))
+
+        hr_image = None if self.hr_folder == None else Image.open(
+            os.path.join(self.hr_folder, self.file_names[i]))
 
         lr_image = lr_image.resize(self.target_size)
         lr_tensor = transforms.ToTensor()(lr_image)
-        hr_tensor = None if hr_image == None else transforms.ToTensor()(hr_image)
-        return (lr_tensor, hr_tensor, self.file_names[i])
+        if hr_image != None:
+            hr_tensor = transforms.ToTensor()(hr_image)
+            return (lr_tensor, hr_tensor, self.file_names[i])
+        else:
+            return (lr_tensor, self.file_names[i])
 
     def __len__(self):
         return len(self.file_names)
