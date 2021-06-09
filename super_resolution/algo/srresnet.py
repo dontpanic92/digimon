@@ -30,7 +30,7 @@ class SRResNet(nn.Module):
         self.norm2 = nn.InstanceNorm2d(64, affine=True)
 
         self.upscale1 = self.upscale()
-        self.upscale2 = self.upscale()
+        # self.upscale2 = self.upscale()
 
         self.conv_final = nn.Conv2d(64, 3, kernel_size=9, padding=4)
 
@@ -48,6 +48,6 @@ class SRResNet(nn.Module):
         x = self.norm2(self.conv2(x))
         x = torch.add(residual, x)
         x = self.upscale1(x)
-        x = self.upscale2(x)
+        # x = self.upscale2(x)
         x = self.conv_final(x)
         return x
