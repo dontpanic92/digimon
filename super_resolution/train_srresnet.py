@@ -10,44 +10,17 @@ from hrsr_dataset import HrsrDataset
 from algo.srcnn import SRCNN
 from algo.srresnet import SRResNet
 
-config = {
-    "SRCNN": {
-        "lr_folder": "../data/270/",
-        "hr_folder": "../data/1080/",
-        "batch_size": 1,
-        "epochs": 5,
-        "target_size": (1920, 1080),
-        "resize_input": False,
-    },
-    "SRResNet": {
-        "lr_folder": "../data/540/",
-        "hr_folder": "../data/1080/",
-        "batch_size": 1,
-        "epochs": 5,
-        "target_size": (1920, 1080),
-        "resize_input": False,
-    }
-}
-
-
-# model = SRCNN()
-model = SRResNet()
-
-model_name = type(model).__name__
-
-LR_FOLDER = config[model_name]["lr_folder"]
+LR_FOLDER = "../data/270/"
 # LR_FOLDER = "../data/540/"
 # HR_FOLDER = "../data/4k/"
-HR_FOLDER = config[model_name]["hr_folder"]
-BATCH_SIZE = config[model_name]["batch_size"]
-EPOCHS = config[model_name]["epochs"]
-target_size = config[model_name]["target_size"]
-resize_input = config[model_name]["resize_input"]
-
-
+HR_FOLDER = "../data/1080/"
 TEMP_FOLDER = "../data/temp/"
+BATCH_SIZE = 1
+EPOCHS = 5
+model = SRResNet()
 MODEL_SAVE_FOLDER = "../models/"
 #target_size = (3840, 2160)
+target_size = (1920, 1080)
 
 ##################################################################################
 
@@ -66,8 +39,8 @@ model = model.to(device)
 def main():
     train_files, test_files = generate_train_test(0.1)
     train_dataset = HrsrDataset(
-        train_files, LR_FOLDER, HR_FOLDER, target_size, resize_input)
-    test_dataset = HrsrDataset(test_files, LR_FOLDER, HR_FOLDER, target_size, resize_input)
+        train_files, LR_FOLDER, HR_FOLDER, target_size, False)
+    test_dataset = HrsrDataset(test_files, LR_FOLDER, HR_FOLDER, target_size, False)
 
     train_loader = DataLoader(train_dataset, BATCH_SIZE, shuffle=True)
     test_loader = DataLoader(test_dataset, BATCH_SIZE, shuffle=False)

@@ -1,6 +1,10 @@
 crawlers
 data
 models
+*.amltmp
+.ipynb_aml_checkpoints
+*.amltemp
+.amlignore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
