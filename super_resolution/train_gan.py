@@ -92,9 +92,9 @@ def main_gan(rank, world_size):
 
     train_files, test_files = generate_train_test(0.1)
     train_dataset = HrsrDataset(
-        train_files, LR_FOLDER, HR_FOLDER, target_size, resize_input)
+        train_files, LR_FOLDER, HR_FOLDER, target_size, resize_lr=resize_input)
     test_dataset = HrsrDataset(
-        test_files, LR_FOLDER, HR_FOLDER, target_size, resize_input)
+        test_files, LR_FOLDER, HR_FOLDER, target_size, resize_lr=resize_input)
 
     train_sampler = DistributedSampler(
         train_dataset,
@@ -190,7 +190,7 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
         current = batch * len(X)
         if batch % 10 == 0:
             loss = generator_loss.item()
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]\r", end='')
 
 
 def pretrain_generator(model, rank, world_size, train_loader, test_loader):
@@ -230,7 +230,7 @@ def pretrain_generator_loop(dataloader, rank, model, loss_fn, optimizer):
         current = batch * len(X)
         if batch % 10 == 0:
             loss = loss.item()
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]\r",)
+            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]\r", end='')
 
     print()
 

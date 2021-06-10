@@ -14,10 +14,13 @@ class HrsrDataset(Dataset):
         self.resize_lr = resize_lr
 
     def __getitem__(self, i):
-        lr_image = Image.open(os.path.join(self.lr_folder, self.file_names[i]))
-        
-        hr_image = None if self.hr_folder == None else Image.open(
-            os.path.join(self.hr_folder, self.file_names[i]))
+        try:
+            lr_image = Image.open(os.path.join(self.lr_folder, self.file_names[i]))
+            hr_image = None if self.hr_folder == None else Image.open(
+                os.path.join(self.hr_folder, self.file_names[i]))
+        except Exception as e:
+            print("error loading image: ", self.file_names[i], e)
+            exit(1)
 
         # print(self.file_names[i])
         if self.resize_lr:
