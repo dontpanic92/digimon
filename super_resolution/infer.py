@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
 from hrsr_dataset import HrsrDataset
-from algo.srcnn import SRCNN
+from models.srcnn import SRCNN
 
 INFER_LR_FOLDER = "../data/Infer_Input/"
 INFER_OUTPUT_FOLDER = "../data/Infer_Output/"

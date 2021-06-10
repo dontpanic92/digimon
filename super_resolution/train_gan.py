@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import os
 import random
-from super_resolution.algo.srgan import Discriminator
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,9 +15,9 @@ import torch.distributed as dist
 from torchvision import transforms
 from PIL import Image
 from hrsr_dataset import HrsrDataset
-from algo.srcnn import SRCNN
-from algo.srresnet import SRResNet
-from algo.srgan import SRGAN, GeneratorLoss
+from models.srcnn import SRCNN
+from models.srresnet import SRResNet
+from models.srgan import SRGAN, GeneratorLoss, Discriminator
 
 config = {
     "SRGAN": {
@@ -34,7 +33,7 @@ config = {
     },
 }
 
-GPU_COUNT = 2
+GPU_COUNT = 1
 
 ModelClass = SRGAN
 model_name = ModelClass.__name__
@@ -50,7 +49,6 @@ EPOCHS = config[model_name]["epochs"]
 target_size = config[model_name]["target_size"]
 resize_input = config[model_name]["resize_input"]
 resume_from = config[model_name]["resume_from"]
-Loss = config[model_name]["loss"]
 pretrained_generator = config[model_name]["pretrained_generator"]
 pretrain_epoches = config[model_name]["pretrain_epochs"]
 
@@ -69,8 +67,7 @@ os.makedirs(model_folder, exist_ok=True)
 os.makedirs(TEMP_FOLDER, exist_ok=True)
 
 test_image = Image.open(os.path.join(DATA_FOLDER, "1.jpg"))
-test_image_tensor = transforms.ToTensor()(test_image)
-
+test_image_tensor = transforms.ToTensor()(test_image).unsqueeze_(0)
 
 def setup(rank, world_size):
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -165,6 +162,7 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
     discriminator.train()
     for batch, (X, y, file_name) in enumerate(dataloader):
         X = X.to(rank)
+        print(X)
         y = y.to(rank)
         generator_output = generator(X)
 
@@ -205,6 +203,7 @@ def pretrain_generator(model, rank, world_size, train_loader, test_loader):
 
         if rank == 0:
             test_input = test_image_tensor.to(rank)
+            print("test_input: ", test_input.size())
             with torch.no_grad():
                 test_output: Tensor = model(test_input)
                 torchvision.utils.save_image(test_output.detach(
@@ -253,9 +252,8 @@ def test_generator(dataloader, rank, model, loss_fn):
 
 
 def generate_train_test(test_ratio):
-    files = os.listdir(LR_FOLDER)
-    random.shuffle(files)
-
+    files = os.listdir(LR_FOLDER)[:11]
+    
     test_count = int(len(files) * test_ratio)
     test_files = files[:test_count]
     train_files = files[test_count:]

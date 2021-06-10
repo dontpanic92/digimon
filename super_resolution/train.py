@@ -11,8 +11,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 import torch.distributed as dist
 from hrsr_dataset import HrsrDataset
-from algo.srcnn import SRCNN
-from algo.srresnet import SRResNet
+from models.srcnn import SRCNN
+from models.srresnet import SRResNet
 
 config = {
     "SRCNN": {

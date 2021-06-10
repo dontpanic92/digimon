@@ -9,8 +9,8 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
 from hrsr_dataset import HrsrDataset
-from algo.srcnn import SRCNN
-from algo.srresnet import SRResNet
+from models.srcnn import SRCNN
+from models.srresnet import SRResNet
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch.distributed as dist
 
