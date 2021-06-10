@@ -116,8 +116,8 @@ def main_gan(rank, world_size):
 
     model = SRResNet().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
-    pretrain_generator(ddp_model, rank, world_size,
-                       train_loader, test_loader)
+    #pretrain_generator(ddp_model, rank, world_size,
+    #                   train_loader, test_loader)
 
     train(ddp_model, rank, world_size, train_loader, test_loader)
 
@@ -125,11 +125,11 @@ def main_gan(rank, world_size):
 
 
 def train(generator, rank, world_size, train_loader, test_loader):
-    generator_loss_fn = GeneratorLoss()
+    generator_loss_fn = GeneratorLoss().to(rank)
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
     discriminator = DDP(Discriminator(target_size).to(rank), device_ids=[rank])
-    discriminator_loss_fn = nn.BCELoss()
+    discriminator_loss_fn = nn.BCELoss().to(rank)
     discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0001)
 
     for e in range(0, EPOCHS):
@@ -142,8 +142,7 @@ def train(generator, rank, world_size, train_loader, test_loader):
             test_input = test_image_tensor.to(rank)
             with torch.no_grad():
                 test_output: Tensor = generator(test_input)
-                torchvision.utils.save_image(test_output.detach(
-                ), os.path.join(TEMP_FOLDER, f"gan_generator_{e}.png"))
+                torchvision.utils.save_image(test_output, os.path.join(TEMP_FOLDER, f"gan_generator_{e}.png"))
 
             torch.save({'generator_loss': str(test_loss)},
                        os.path.join(model_folder, f'SRGAN_loss.json'))
@@ -156,6 +155,8 @@ def train(generator, rank, world_size, train_loader, test_loader):
 
 
 def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, discriminator_loss_fn, generator_optimizer, discriminator_optimizer):
+    zeros = torch.Tensor(torch.zeros((1, 1))).to(rank)
+    ones = torch.Tensor(torch.ones((1, 1))).to(rank)
 
     size = len(dataloader.sampler)
     generator.train()
@@ -167,26 +168,28 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
 
         discriminator.zero_grad()
 
-        discriminator_output = discriminator(generator_output)
-        discriminator_ground_truth = discriminator(X)
+        discriminator_output = discriminator(generator_output.detach())
+        discriminator_ground_truth = discriminator(y)
         discriminator_loss_fake = discriminator_loss_fn(
-            discriminator_output, torch.zeros(1))
+            discriminator_output, zeros)
         discriminator_loss_fake.backward()
 
-        discriminator_loss_truth = discriminator_loss_fn(discriminator_ground_truth, torch.ones(1))
+        discriminator_loss_truth = discriminator_loss_fn(discriminator_ground_truth, ones)
         discriminator_loss_truth.backward()
 
         # discriminator_loss = discriminator_loss_fake + discriminator_loss_truth
         discriminator_optimizer.step()
 
         generator.zero_grad()
-        generator_loss = generator_loss_fn(X, y, discriminator_output, torch.zeros(1))
+        
+        discriminator_output_for_generator = discriminator(generator_output)
+        generator_loss = generator_loss_fn(generator_output, y, discriminator_output_for_generator, ones)
         generator_loss.backward()
         generator_optimizer.step()
 
         current = batch * len(X)
         if batch % 10 == 0:
-            loss = loss.item()
+            loss = generator_loss.item()
             print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
 
@@ -205,8 +208,7 @@ def pretrain_generator(model, rank, world_size, train_loader, test_loader):
             print("test_input: ", test_input.size())
             with torch.no_grad():
                 test_output: Tensor = model(test_input)
-                torchvision.utils.save_image(test_output.detach(
-                ), os.path.join(TEMP_FOLDER, f"generator_{e}.png"))
+                torchvision.utils.save_image(test_output, os.path.join(TEMP_FOLDER, f"generator_{e}.png"))
 
     torch.save(model.module.state_dict(), os.path.join(
         model_folder, f'{type(model).__name__}_pretrain.pth'))

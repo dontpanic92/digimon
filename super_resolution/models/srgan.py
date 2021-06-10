@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision
 from models.srresnet import SRResNet
 
@@ -7,8 +8,8 @@ from models.srresnet import SRResNet
 class Discriminator(nn.Module):
     def __init__(self, target_size):
         super(Discriminator, self).__init__()
-        conv_output_w = int(target_size[0] / 16)
-        conv_output_h = int(target_size[1] / 16)
+        conv_output_w = int((((((target_size[0] + 1) / 2) + 1) / 2 + 1) / 2 + 1) / 2)
+        conv_output_h = int((((((target_size[1] + 1) / 2) + 1) / 2 + 1) / 2 + 1) / 2)
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
         self.relu1 = nn.LeakyReLU(0.2, inplace=True)
@@ -21,14 +22,15 @@ class Discriminator(nn.Module):
             self.conv_layer(256, 512, 1),
             self.conv_layer(512, 512, 2),
         )
-        self.dense = nn.Linear(512 * conv_output_w * conv_output_h, 1024)
+        self.flatten = nn.Flatten(1)
+        self.dense = nn.Linear(512 * conv_output_w * conv_output_h, 128)
         self.relu2 = nn.LeakyReLU(0.2, inplace=True)
-        self.dense2 = nn.Linear(1024, 1)
+        self.dense2 = nn.Linear(128, 1)
         self.sigmoid = nn.Sigmoid()
     
     def conv_layer(self, in_channel, out_channel, stride):
         return nn.Sequential(
-            nn.Conv2d(in_channel, out_channel, kernel_size=3, stride=stride),
+            nn.Conv2d(in_channel, out_channel, kernel_size=3, padding=1, stride=stride),
             nn.InstanceNorm2d(out_channel, affine=True),
             nn.LeakyReLU(0.2, inplace=True)
         )
@@ -36,7 +38,9 @@ class Discriminator(nn.Module):
     def forward(self, x):
         x = self.relu1(self.conv1(x))
         x = self.conv(x)
-        x = self.relu2(self.dense(x))
+        x = self.flatten(x)
+        x = self.dense(x)
+        x = self.relu2(x)
         x = self.sigmoid(self.dense2(x))
         return x
 
@@ -44,7 +48,7 @@ class VggLoss(nn.Module):
     def __init__(self):
         super(VggLoss, self).__init__()
 
-        features_net = nn.Sequential(*list(torchvision.models.vgg19(pretrained=True).children())[:39])
+        features_net = nn.Sequential(*list(torchvision.models.vgg19(pretrained=True).features.children())[:39])
         self.features_net = features_net.eval()
         for p in self.features_net.parameters():
             p.requires_grad = False
@@ -52,8 +56,10 @@ class VggLoss(nn.Module):
         self.mse = nn.MSELoss()
     
     def forward(self, input: torch.Tensor, target: torch.Tensor):
-        input_features = self.features_net(input)
-        target_features = self.features_net(target)
+        resized_input = F.interpolate(input, size=(224, 224), mode='bicubic', align_corners=False)
+        resized_target = F.interpolate(target, size=(224, 224), mode='bicubic', align_corners=False)
+        input_features = self.features_net(resized_input)
+        target_features = self.features_net(resized_target)
         return self.mse(input_features, target_features)
 
 class GeneratorLoss(nn.Module):
