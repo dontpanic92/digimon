@@ -128,7 +128,7 @@ def train(generator, rank, world_size, train_loader, test_loader):
     generator_loss_fn = GeneratorLoss()
     generator_optimizer = optim.Adam(generator.parameters(), lr=0.0001)
 
-    discriminator = DDP(Discriminator().to(rank), device_ids=[rank])
+    discriminator = DDP(Discriminator(target_size).to(rank), device_ids=[rank])
     discriminator_loss_fn = nn.BCELoss()
     discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=0.0001)
 
@@ -162,7 +162,6 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
     discriminator.train()
     for batch, (X, y, file_name) in enumerate(dataloader):
         X = X.to(rank)
-        print(X)
         y = y.to(rank)
         generator_output = generator(X)
 
@@ -177,7 +176,7 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
         discriminator_loss_truth = discriminator_loss_fn(discriminator_ground_truth, torch.ones(1))
         discriminator_loss_truth.backward()
 
-        discriminator_loss = discriminator_loss_fake + discriminator_loss_truth
+        # discriminator_loss = discriminator_loss_fake + discriminator_loss_truth
         discriminator_optimizer.step()
 
         generator.zero_grad()
