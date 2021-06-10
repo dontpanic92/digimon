@@ -116,8 +116,8 @@ def main_gan(rank, world_size):
 
     model = SRResNet().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
-    #pretrain_generator(ddp_model, rank, world_size,
-    #                   train_loader, test_loader)
+    pretrain_generator(ddp_model, rank, world_size,
+                       train_loader, test_loader)
 
     train(ddp_model, rank, world_size, train_loader, test_loader)
 
@@ -253,7 +253,7 @@ def test_generator(dataloader, rank, model, loss_fn):
 
 
 def generate_train_test(test_ratio):
-    files = os.listdir(LR_FOLDER)[:11]
+    files = os.listdir(LR_FOLDER)
     
     test_count = int(len(files) * test_ratio)
     test_files = files[:test_count]
