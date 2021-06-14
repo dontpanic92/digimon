@@ -184,10 +184,9 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
 
         generator.zero_grad()
         
-        cropped_image = torchvision.transforms.RandomCrop()()
-        
-        discriminator_output_for_generator = discriminator(generator_output)
-        generator_loss = generator_loss_fn(generator_output, y, discriminator_output_for_generator, ones)
+        cropped_image = torchvision.transforms.RandomCrop()((224, 224))
+        discriminator_output_for_generator = discriminator(cropped_image)
+        generator_loss = generator_loss_fn(cropped_image, y, discriminator_output_for_generator, ones)
         generator_loss.backward()
         generator_optimizer.step()
 

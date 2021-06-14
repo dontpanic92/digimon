@@ -56,8 +56,10 @@ class VggLoss(nn.Module):
         self.mse = nn.MSELoss()
     
     def forward(self, input: torch.Tensor, target: torch.Tensor):
-        resized_input = F.interpolate(input, size=(224, 224), mode='bicubic', align_corners=False)
-        resized_target = F.interpolate(target, size=(224, 224), mode='bicubic', align_corners=False)
+        # resized_input = F.interpolate(input, size=(224, 224), mode='bicubic', align_corners=False)
+        # resized_target = F.interpolate(target, size=(224, 224), mode='bicubic', align_corners=False)
+        resized_input = input
+        resized_target = target
         input_features = self.features_net(resized_input)
         target_features = self.features_net(resized_target)
         return self.mse(input_features, target_features)
