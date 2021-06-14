@@ -24,7 +24,8 @@ config = {
         "lr_folder": "../data/540/",
         "hr_folder": "../data/1080/",
         "batch_size": 1,
-        "pretrain_epochs": 2,
+        "pretrain_epochs": 5,
+        "pretrain_lr": [0.001, 0.0001, 0.00001, 0.00001, 0.00001],
         "epochs": 2,
         "target_size": (1920, 1080),
         "resize_input": False,
@@ -51,6 +52,7 @@ resize_input = config[model_name]["resize_input"]
 resume_from = config[model_name]["resume_from"]
 pretrained_generator = config[model_name]["pretrained_generator"]
 pretrain_epoches = config[model_name]["pretrain_epochs"]
+pretrain_lr = config[model_name]["pretrain_lr"]
 
 
 TEMP_FOLDER = "../data/temp/"
@@ -116,8 +118,8 @@ def main_gan(rank, world_size):
 
     model = SRResNet().to(rank)
     ddp_model = DDP(model, device_ids=[rank])
-    pretrain_generator(ddp_model, rank, world_size,
-                       train_loader, test_loader)
+    # pretrain_generator(ddp_model, rank, world_size,
+    #                    train_loader, test_loader)
 
     train(ddp_model, rank, world_size, train_loader, test_loader)
 
@@ -147,11 +149,11 @@ def train(generator, rank, world_size, train_loader, test_loader):
             torch.save({'generator_loss': str(test_loss)},
                        os.path.join(model_folder, f'SRGAN_loss.json'))
 
-    torch.save(generator.module.state_dict(), os.path.join(
-        model_folder, f'SRGAN_generator_{e}.pth'))
+        torch.save(generator.module.state_dict(), os.path.join(
+            model_folder, f'SRGAN_generator_{e}.pth'))
 
-    torch.save(discriminator.module.state_dict(), os.path.join(
-        model_folder, f'SRGAN_discriminator_{e}.pth'))
+        torch.save(discriminator.module.state_dict(), os.path.join(
+            model_folder, f'SRGAN_discriminator_{e}.pth'))
 
 
 def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, discriminator_loss_fn, generator_optimizer, discriminator_optimizer):
@@ -182,6 +184,8 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
 
         generator.zero_grad()
         
+        cropped_image = torchvision.transforms.RandomCrop()()
+        
         discriminator_output_for_generator = discriminator(generator_output)
         generator_loss = generator_loss_fn(generator_output, y, discriminator_output_for_generator, ones)
         generator_loss.backward()
@@ -196,8 +200,13 @@ def train_batch(dataloader, rank, generator, discriminator, generator_loss_fn, d
 def pretrain_generator(model, rank, world_size, train_loader, test_loader):
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=0.0001)
-
+    if len(pretrain_lr) < pretrain_epoches:
+        print("pretrain_lr is small than epoches")
+        exit(1)
+    
     for e in range(0, pretrain_epoches):
+        optimizer.lr = pretrain_lr[e]
+                
         print(f"Epoch {e}")
         train_loader.sampler.set_epoch(e)
         pretrain_generator_loop(train_loader, rank, model, loss_fn, optimizer)
@@ -210,8 +219,8 @@ def pretrain_generator(model, rank, world_size, train_loader, test_loader):
                 test_output: Tensor = model(test_input)
                 torchvision.utils.save_image(test_output, os.path.join(TEMP_FOLDER, f"generator_{e}.png"))
 
-    torch.save(model.module.state_dict(), os.path.join(
-        model_folder, f'{type(model).__name__}_pretrain.pth'))
+        torch.save(model.module.state_dict(), os.path.join(
+            model_folder, f'SRResNet_pretrain_{e}.pth'))
 
 
 def pretrain_generator_loop(dataloader, rank, model, loss_fn, optimizer):
@@ -253,7 +262,11 @@ def test_generator(dataloader, rank, model, loss_fn):
 
 
 def generate_train_test(test_ratio):
-    files = os.listdir(LR_FOLDER)
+    files = []
+    
+    for f in os.listdir(LR_FOLDER):
+        if not f.startswith("."):
+            files.append(f)
     
     test_count = int(len(files) * test_ratio)
     test_files = files[:test_count]

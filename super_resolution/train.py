@@ -186,7 +186,12 @@ def save_decoded_image(img, name):
     save_image(img, name)
 
 def generate_train_test(test_ratio):
-    files = os.listdir(LR_FOLDER)
+    files = []
+    
+    for f in os.listdir(LR_FOLDER):
+        if not f.startswith("."):
+            files.append(f)
+
     random.shuffle(files)
 
     test_count = int(len(files) * test_ratio)

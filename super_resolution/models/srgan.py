@@ -23,9 +23,9 @@ class Discriminator(nn.Module):
             self.conv_layer(512, 512, 2),
         )
         self.flatten = nn.Flatten(1)
-        self.dense = nn.Linear(512 * conv_output_w * conv_output_h, 128)
+        self.dense = nn.Linear(512 * conv_output_w * conv_output_h, 1024)
         self.relu2 = nn.LeakyReLU(0.2, inplace=True)
-        self.dense2 = nn.Linear(128, 1)
+        self.dense2 = nn.Linear(1024, 1)
         self.sigmoid = nn.Sigmoid()
     
     def conv_layer(self, in_channel, out_channel, stride):

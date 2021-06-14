@@ -13,7 +13,8 @@ INFER_LR_FOLDER = "../data/Infer_Input_540/"
 INFER_OUTPUT_FOLDER = "../data/Infer_Output/"
 BATCH_SIZE = 1
 MODEL_LOAD_FOLDER = "../weights/"
-MODEL_NAME = "SRGAN_generator_1.pth"
+MODEL_NAME = "SRResNet_pretrain_2_1080_16rb.pth"
+#MODEL_NAME = "SRGAN_generator_1.pth"
 
 ##################################################################################
 

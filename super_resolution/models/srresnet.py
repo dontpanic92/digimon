@@ -25,7 +25,7 @@ class SRResNet(nn.Module):
 
         self.conv1 = nn.Conv2d(3, 64, kernel_size=9, padding=4)
         self.relu1 = nn.PReLU()
-        self.residuals = nn.Sequential(*[Residual()] * 5)
+        self.residuals = nn.Sequential(*[Residual()] * 16)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
         self.norm2 = nn.InstanceNorm2d(64, affine=True)
 
